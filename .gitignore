@@ -7,3 +7,5 @@ __pycache__/
 /experiments/issue*/data/
 /misc/.tox/
 /misc/autodoc/downward-xmlrpc.secret
+*.so
+*.egg-info

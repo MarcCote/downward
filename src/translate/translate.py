@@ -4,6 +4,7 @@
 import os
 import sys
 import traceback
+import signal
 
 def python_version_supported():
     return sys.version_info >= (3, 6)
@@ -16,19 +17,18 @@ from collections import defaultdict
 from copy import deepcopy
 from itertools import product
 
-import axiom_rules
-import fact_groups
-import instantiate
-import normalize
-import options
-import pddl
-import pddl_parser
-import sas_tasks
-import signal
-import simplify
-import timers
-import tools
-import variable_order
+from . import axiom_rules
+from . import fact_groups
+from . import instantiate
+from . import normalize
+from . import options
+from . import pddl
+from . import pddl_parser
+from . import sas_tasks
+from . import simplify
+from . import timers
+from . import tools
+from . import variable_order
 
 # TODO: The translator may generate trivial derived variables which are always
 # true, for example if there ia a derived predicate in the input that only

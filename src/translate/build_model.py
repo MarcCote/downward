@@ -3,10 +3,11 @@
 
 import sys
 import itertools
-
-import pddl
-import timers
 from functools import reduce
+
+from . import pddl
+from . import timers
+
 
 def convert_rules(prog):
     RULE_TYPES = {
@@ -23,6 +24,7 @@ def convert_rules(prog):
         rule.validate()
         result.append(rule)
     return result
+
 
 def variables_to_numbers(effect, conditions):
     new_effect_args = list(effect.args)

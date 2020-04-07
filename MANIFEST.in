@@ -1,0 +1,11 @@
+include build.py
+include build_configs.py
+
+include requirements.txt
+include README.md
+include LICENSE.md
+include setup.sh
+
+global-exclude *.o *.a
+
+prune builds
