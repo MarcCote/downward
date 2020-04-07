@@ -16,6 +16,7 @@ for config_file in sorted(glob.glob(os.path.join(script_dir, "*build_configs.py"
 
 DEFAULT_CONFIG_NAME = CONFIGS.pop("DEFAULT")
 DEBUG_CONFIG_NAME = CONFIGS.pop("DEBUG")
+LIBRARY_CONFIG_NAME = CONFIGS.pop("LIBRARY")
 
 CMAKE = "cmake"
 DEFAULT_MAKE_PARAMETERS = []
@@ -50,8 +51,9 @@ def print_usage():
     make_name = os.path.basename(MAKE)
     generator_name = CMAKE_GENERATOR.lower()
     default_config_name = DEFAULT_CONFIG_NAME
+    library_config_name = LIBRARY_CONFIG_NAME
     debug_config_name = DEBUG_CONFIG_NAME
-    print("""Usage: {script_name} [BUILD [BUILD ...]] [--all] [--debug] [MAKE_OPTIONS]
+    print("""Usage: {script_name} [BUILD [BUILD ...]] [--all] [--debug] [--library] [MAKE_OPTIONS]
 
 Build one or more predefined build configurations of Fast Downward. Each build
 uses {cmake_name} to generate {generator_name} and then uses {make_name} to compile the
@@ -65,6 +67,7 @@ Build configurations
 
 --all         Alias to build all build configurations.
 --debug       Alias to build the default debug build configuration.
+--library     Alias to build FastDownward as a library.
 --help        Print this message and exit.
 
 Make options
@@ -73,6 +76,8 @@ Make options
 Example usage:
   ./{script_name}                     # build {default_config_name} in #cores threads
   ./{script_name} -j4                 # build {default_config_name} in 4 threads
+  ./{script_name} library             # build library
+  ./{script_name} --library           # build {library_config_name}
   ./{script_name} debug               # build debug
   ./{script_name} --debug             # build {debug_config_name}
   ./{script_name} release debug       # build release and debug configs
@@ -135,6 +140,8 @@ def main():
         if arg == "--help" or arg == "-h":
             print_usage()
             sys.exit(0)
+        elif arg == "--library":
+            config_names.add(LIBRARY_CONFIG_NAME)
         elif arg == "--debug":
             config_names.add(DEBUG_CONFIG_NAME)
         elif arg == "--all":

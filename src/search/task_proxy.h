@@ -573,6 +573,8 @@ public:
     ~State() = default;
     State(const State &) = default;
 
+    State() = default;
+
     State(State &&other)
         : task(other.task), values(std::move(other.values)) {
         other.task = nullptr;
@@ -616,9 +618,9 @@ public:
     }
 
     State get_successor(OperatorProxy op) const {
-        if (task->get_num_axioms() > 0) {
-            ABORT("State::get_successor currently does not support axioms.");
-        }
+        // if (task->get_num_axioms() > 0) {
+        //     ABORT("State::get_successor currently does not support axioms.");
+        // }
         assert(!op.is_axiom());
         //assert(is_applicable(op, state));
         std::vector<int> new_values = values;

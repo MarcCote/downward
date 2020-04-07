@@ -1,0 +1,21 @@
+include build.py
+include build_configs.py
+
+recursive-include driver *
+recursive-include src/ CMakeLists.txt
+recursive-include src/cmake_modules *
+recursive-include src/search *
+recursive-include src/translate *
+
+include requirements.txt
+include README.md
+include LICENSE.md
+include setup.sh
+
+global-exclude *.o *.a
+
+prune src/fast_downward/driver
+prune src/fast_downward/translate
+exclude src/fast_downward/libdownward.so
+
+prune builds

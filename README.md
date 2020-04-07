@@ -1,4 +1,16 @@
-# Fast Downward
+# Fast Downward for TextWorld
+This is a fork of the [Fast Downward](https://github.com/aibasel/downward) classical planning system, modified to work with [TextWorld](https://github.com/microsoft/TextWorld).
+
+Notable changes are as follows:
+- It can be pip-installed: `pip install downward-textworld`;
+- It offers a limited Python API to load PDDL domain/problem files and run the planner;
+- It can be used to retrieve the list of successors given a state;
+- It can be used to modify a given state by applying one successor at a time;
+
+This package is mainly used to run [ALFWorld](https://alfworld.github.io).
+This package is based on the 20.06 release of Fast Downward.
+
+# More on Fast Downward (Original Readme)
 
 Fast Downward is a domain-independent classical planning system.
 

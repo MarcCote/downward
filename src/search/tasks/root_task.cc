@@ -68,6 +68,7 @@ class RootTask : public AbstractTask {
 
 public:
     explicit RootTask(istream &in);
+    RootTask(istream &in, const GlobalState &state);
 
     virtual int get_num_variables() const override;
     virtual string get_variable_name(int var) const override;
@@ -359,6 +360,55 @@ RootTask::RootTask(istream &in) {
     axiom_evaluator.evaluate(initial_state_values);
 }
 
+RootTask::RootTask(istream &in, const GlobalState &state) {
+    read_and_verify_version(in);
+    bool use_metric = read_metric(in);
+    variables = read_variables(in);
+    int num_variables = variables.size();
+
+    mutexes = read_mutexes(in, variables);
+
+    initial_state_values.resize(num_variables);
+    check_magic(in, "begin_state");
+    for (int i = 0; i < num_variables; ++i) {
+        in >> initial_state_values[i];
+    }
+    check_magic(in, "end_state");
+
+    // Overwrite initial_state_values based on the provided state.
+    for (int i = 0; i < num_variables; ++i) {
+        bool match_found = false;
+        for (FactProxy fact : state.unpack()) {
+
+            for (string name : variables[i].fact_names) {
+                if (fact.get_name() == name) {
+                    initial_state_values[i] = fact.get_value();
+                    match_found = true;
+                    break;
+                }
+            }
+
+            if (match_found) break;
+        }
+
+        variables[i].axiom_default_value = initial_state_values[i];
+    }
+
+    goals = read_goal(in);
+    check_facts(goals, variables);
+    operators = read_actions(in, false, use_metric, variables);
+    axioms = read_actions(in, true, use_metric, variables);
+    /* TODO: We should be stricter here and verify that we
+       have reached the end of "in". */
+
+    /*
+      HACK: We use a TaskProxy to access g_axiom_evaluators here which assumes
+      that this task is completely constructed.
+    */
+    AxiomEvaluator &axiom_evaluator = g_axiom_evaluators[TaskProxy(*this)];
+    axiom_evaluator.evaluate(initial_state_values);
+}
+
 const ExplicitVariable &RootTask::get_variable(int var) const {
     assert(utils::in_bounds(var, variables));
     return variables[var];
@@ -496,6 +546,11 @@ void RootTask::convert_state_values(
 void read_root_task(istream &in) {
     assert(!g_root_task);
     g_root_task = make_shared<RootTask>(in);
+}
+
+void read_root_task(istream &in, const GlobalState &state) {
+    assert(!g_root_task);
+    g_root_task = make_shared<RootTask>(in, state);
 }
 
 static shared_ptr<AbstractTask> _parse(OptionParser &parser) {
