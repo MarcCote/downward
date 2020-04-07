@@ -1,7 +1,21 @@
+import os
+import sys
+import shutil
+import subprocess
 from os.path import join as pjoin
 
 from setuptools import setup, find_packages
 
+
+BASEPATH = os.path.dirname(os.path.abspath(__file__))
+subprocess.check_call(['python', 'build.py', '--library'], cwd=BASEPATH)
+
+libdownward = 'builds/library/search/libdownward.so'
+if not os.path.isfile(libdownward):
+    print('ERROR: Unable to find required library %s.'%(libdownward))
+    sys.exit(1)
+
+shutil.copy(libdownward, "src/fast_downward/libdownward.so")
 
 setup(
     name='fast_downward',

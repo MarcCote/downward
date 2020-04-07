@@ -1,8 +1,10 @@
-release = ["-DCMAKE_BUILD_TYPE=Release"]
-debug = ["-DCMAKE_BUILD_TYPE=Debug"]
-releasenolp = ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_LP=NO"]
-debugnolp = ["-DCMAKE_BUILD_TYPE=Debug", "-DUSE_LP=NO"]
+release = ["-DCMAKE_BUILD_TYPE=Release", "-DPLUGIN_LIBRARY_ENABLED=NO"]
+debug = ["-DCMAKE_BUILD_TYPE=Debug", "-DPLUGIN_LIBRARY_ENABLED=NO"]
+library = ["-DCMAKE_BUILD_TYPE=Library", "-DDISABLE_PLUGINS_BY_DEFAULT=YES", "-DPLUGIN_LIBRARY_ENABLED=YES"]
+releasenolp = ["-DCMAKE_BUILD_TYPE=Release", "-DUSE_LP=NO", "-DPLUGIN_LIBRARY_ENABLED=NO"]
+debugnolp = ["-DCMAKE_BUILD_TYPE=Debug", "-DUSE_LP=NO", "-DPLUGIN_LIBRARY_ENABLED=NO"]
 minimal = ["-DCMAKE_BUILD_TYPE=Release", "-DDISABLE_PLUGINS_BY_DEFAULT=YES"]
 
 DEFAULT = "release"
 DEBUG = "debug"
+LIBRARY = "library"

@@ -17,7 +17,11 @@ fast_downward_set_linker_flags()
 
 # Collect source files needed for the active plugins.
 include("${CMAKE_CURRENT_SOURCE_DIR}/DownwardFiles.cmake")
-add_executable(downward ${PLANNER_SOURCES})
+if(PLUGIN_LIBRARY_ENABLED)
+    add_library(downward SHARED ${PLANNER_SOURCES})
+else()
+    add_executable(downward ${PLANNER_SOURCES})
+endif()
 
 ## == Includes ==
 

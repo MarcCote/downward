@@ -47,7 +47,6 @@ fast_downward_plugin(
     HELP "Core source files"
     SOURCES
         planner
-
         abstract_task
         axioms
         command_line
@@ -82,6 +81,13 @@ fast_downward_plugin(
 
     DEPENDS CAUSAL_GRAPH INT_HASH_SET INT_PACKER ORDERED_SET SEGMENTED_VECTOR SUBSCRIBER SUCCESSOR_GENERATOR TASK_PROPERTIES
     CORE_PLUGIN
+)
+
+fast_downward_plugin(
+    NAME LIBRARY
+    HELP "FastDownward as a library"
+    SOURCES
+        interface
 )
 
 fast_downward_plugin(
