@@ -111,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument("--problem")
     args = parser.parse_args()
 
-    if args.domain is None and args.problem:
+    if args.domain is None and args.problem is None:
         run_textworld_example(args)
     else:
         run_custom_pddl(args)

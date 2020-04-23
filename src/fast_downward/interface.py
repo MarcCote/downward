@@ -167,7 +167,7 @@ class State(textworld.logic.State):
         super().__init__(*args, **kwargs)
 
         self.downward_lib = load_downward_lib()
-        if self.facts:
+        if list(self.facts):
             self._init_planner()
 
     def _init_planner(self, domain_filename=None, problem_filename=None):
