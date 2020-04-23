@@ -24,20 +24,30 @@ StateRegistry* state_registry = nullptr;
 
 typedef struct Operator_t {
     int id;
-    char name[128];
+    char name[1024];
     int nb_effect_atoms;
 } Operator_t;
 
 
 typedef struct Atom_t {
-    char name[128];
+    char name[1024];
 } Atom_t;
 
 
 extern "C" void cleanup() {
+    if(DEBUG) {
+        utils::register_event_handlers();
+        cout << "cleaning " << state_registry << "... ";
+    }
+
     delete state_registry;
     state_registry = nullptr;
     tasks::g_root_task = nullptr;
+
+    if(DEBUG) {
+        utils::register_event_handlers();
+        cout << "done" << endl;
+    }
 }
 
 

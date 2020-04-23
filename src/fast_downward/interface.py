@@ -64,10 +64,12 @@ class Operator(Structure):
     :param name: Operator name
     :type name: string
 
+    ..warning this class must reflect the C struct in interface.cc.
+
     """
     _fields_ = [
-        ("id",        c_int),
-        ("_name",      c_char*128),  # Fixed-length name.
+        ("id", c_int),
+        ("_name", c_char*1024),  # Fixed-length name.
         ("nb_effect_atoms", c_int),
     ]
 
@@ -96,9 +98,11 @@ class Atom(Structure):
     :param name: Operator name
     :type name: string
 
+    ..warning this class must reflect the C struct in interface.cc.
+
     """
     _fields_ = [
-        ("_name",      c_char*128),  # Fixed-length name.
+        ("_name", c_char*1024),  # Fixed-length name.
     ]
 
     def __init__(self):
@@ -119,7 +123,7 @@ class Atom(Structure):
         atom_type, rest = self.name.split(" ", 1)
         name, args = rest.split("(", 1)
         args = args[:-1].split(", ")
-        arguments = [Variable(get_var_name(arg), get_var_type(arg)) for arg in args]
+        arguments = [Variable(get_var_name(arg), get_var_type(arg)) for arg in args if arg]
         if atom_type == "NegatedAtom":
             name = "not_" + name
 
