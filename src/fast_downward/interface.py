@@ -129,6 +129,16 @@ class Atom(Structure):
 
         return Proposition(name, arguments)
 
+    def get_fact(self, name2type={}) -> Proposition:
+        atom_type, rest = self.name.split(" ", 1)
+        name, args = rest.split("(", 1)
+        args = args[:-1].split(", ")
+        arguments = [Variable(get_var_name(arg), name2type[arg]) for arg in args if arg]
+        if atom_type == "NegatedAtom":
+            name = "not_" + name
+
+        return Proposition(name, arguments)
+
 
 def load_downward_lib():
     """ Loads a copy of fast-downward's shared library. """
@@ -189,11 +199,34 @@ class State(textworld.logic.State):
                     f.write(self.as_pddl())
 
             # TODO: make translate return the string instead of writing to a temp file.
-            translate(domain_filename, problem_filename, output_filename)
+            task = translate(domain_filename, problem_filename, output_filename)
             with open(output_filename) as f:
                 sas = f.read()
 
             self.downward_lib.load_sas(sas.encode('utf-8'))
+
+            import fast_downward
+            self.name2type = {o.name: o.type_name for o in task.objects}
+            def _atom2proposition(atom):
+                if isinstance(atom, fast_downward.translate.pddl.conditions.Atom):
+                    if atom.predicate == "=":
+                        return None
+
+                    return Proposition(atom.predicate, [Variable(arg, self.name2type[arg]) for arg in atom.args])
+
+                elif isinstance(atom, fast_downward.translate.pddl.f_expression.Assign):
+                    if atom.fluent.symbol == "total-cost":
+                        return None
+
+                    #name = "{}_{}".format(atom.fluent.symbol, atom.expression.value)
+                    name = "{}".format(atom.expression.value)
+                    return Proposition(name, [Variable(arg, self.name2type[arg]) for arg in atom.fluent.args])
+
+
+            facts = [_atom2proposition(atom) for atom in task.init]
+            facts = list(filter(None, facts))
+
+            self.add_facts(facts)
 
     @classmethod
     def from_pddl(cls, domain_filename: str, problem_filename: str) -> "State":
@@ -203,7 +236,7 @@ class State(textworld.logic.State):
         state_size = state.downward_lib.get_state_size()
         atoms = (Atom * state_size)()
         state.downward_lib.get_state(atoms)
-        facts = [atom.as_fact for atom in atoms]
+        facts = [atom.get_fact(state.name2type) for atom in atoms]
         facts = [fact for fact in facts if not fact.is_negation]
         state.add_facts(facts)
         return state
@@ -335,11 +368,11 @@ class State(textworld.logic.State):
 
         effects = (Atom * op.nb_effect_atoms)()
         self.downward_lib.apply_operator(op.id, effects)
-        pprint(list(str(atom.as_fact) for atom in effects))
+        pprint(list(str(atom.get_fact(self.name2type)) for atom in effects))
 
         # Update facts
         for effect in effects:
-            prop = effect.as_fact
+            prop = effect.get_fact(self.name2type)
             if prop.is_negation:
                 self.remove_fact(prop.negate())
             else:
@@ -350,7 +383,7 @@ class State(textworld.logic.State):
         state_size = self.downward_lib.get_state_size()
         atoms = (Atom * state_size)()
         self.downward_lib.get_state(atoms)
-        pprint(list(str(atom.as_fact) for atom in atoms))
+        pprint(list(str(atom.get_fact(self.name2type)) for atom in atoms))
 
     def __del__(self):
         if hasattr(self, "downward_lib"):
@@ -384,4 +417,4 @@ def translate(domain_filename="domain.pddl", task_filename="problem.pddl", sas_f
     with open(options.sas_file, "w") as output_file:
         sas_task.output(output_file)
 
-    return None
+    return task

@@ -2,6 +2,7 @@ import argparse
 
 import textworld
 from textworld.generator import KnowledgeBase
+from textworld.logic import Proposition, Variable
 
 from fast_downward.interface import State
 
@@ -73,12 +74,43 @@ def run_textworld_example(args):
     del state
 
 
+
+
+import hashlib
+
+
+def _demangle_alfred_name(text):
+    text = text.replace("_bar_", "|")
+    text = text.replace("_minus_", "-")
+    text = text.replace("_dot_", ".")
+    text = text.replace("_comma_", ",")
+
+    splits = text.split("_", 1)
+    if len(splits) == 1:
+        return text
+
+    name, rest = splits
+    m = hashlib.md5()
+    m.update(rest.encode("utf-8"))
+    return "{}_{}".format(name, m.hexdigest()[:6])
+
+
+def clean_alfred_facts(facts):
+    def _clean_fact(fact: textworld.logic.Proposition):
+        args = [Variable(_demangle_alfred_name(arg.name), arg.type) for arg in fact.arguments]
+        return Proposition(fact.name, args)
+
+    facts = [_clean_fact(fact) for fact in facts if not fact.name.startswith("new-axiom@")]
+    return facts
+
+
 def run_custom_pddl(args):
-    #state = State(KnowledgeBase.default().logic, game.world.facts)
     state = State.from_pddl(args.domain, args.problem)
     print(state)
     if args.render:
-        textworld.render.visualize(state, True)
+        # textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser", save_html="/tmp/plot.html")
+        textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser")
+        # textworld.render.visualize(state, True)
 
     defaults = [7]
     while True:
@@ -99,7 +131,9 @@ def run_custom_pddl(args):
         state.apply(int(value))
 
         if args.render:
-            textworld.render.visualize(state, True)
+            # textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser", save_html="/tmp/plot.html")
+            textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser")
+            # textworld.render.visualize(state, True)
 
     del state
 
