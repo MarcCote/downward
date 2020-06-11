@@ -1,82 +1,10 @@
 import argparse
-
-import textworld
-from textworld.generator import KnowledgeBase
-from textworld.logic import Proposition, Variable
-
-from fast_downward.interface import State
-
-
-def build_game():
-    options = textworld.GameOptions()
-    M = textworld.GameMaker(options)
-
-    # The goal
-    commands = ["go east", "insert ball into chest"]
-
-    # Create a 'bedroom' room.
-    R1 = M.new_room("bedroom")
-    R2 = M.new_room("kitchen")
-    M.set_player(R1)
-
-    path = M.connect(R1.east, R2.west)
-    path.door = M.new(type='d', name='wooden door')
-    path.door.add_property("closed")
-    path.door.add_property("openable")
-    path.door.add_property("closeable")
-
-    ball = M.new(type='t', name='ball')
-    ball.add_property("portable")
-    M.inventory.add(ball)
-
-    # Add a closed chest in R2.
-    chest = M.new(type='t', name='chest')
-    chest.add_property("closed")
-    chest.add_property("closeable")
-    chest.add_property("openable")
-    chest.add_property("container")
-    R2.add(chest)
-
-    # M.set_quest_from_commands(commands)
-    game = M.build()
-
-    # M.render(interactive=True)
-    return game
-
-def run_textworld_example(args):
-    game = build_game()
-    state = State(KnowledgeBase.default().logic, game.world.facts)
-    print(state)
-    if args.render:
-        textworld.render.visualize(state, True)
-
-    defaults = []
-    while True:
-        state.print_state()
-        state.all_applicable_actions()
-
-        default = None
-        if defaults:
-            default = defaults.pop()
-
-        value = input("Operation Id [{}]: > ".format(default or ""))
-        if not value:
-            value = default
-
-        if int(value) == -1:
-            break
-
-        state.apply(int(value))
-
-        if args.render:
-            textworld.render.visualize(state, True)
-
-    del state
-
-
-
-
 import hashlib
+
+from pprint import pprint
+
+import fast_downward
+from fast_downward import Atom, Operator
 
 
 def _demangle_alfred_name(text):
@@ -95,57 +23,65 @@ def _demangle_alfred_name(text):
     return "{}_{}".format(name, m.hexdigest()[:6])
 
 
-def clean_alfred_facts(facts):
-    def _clean_fact(fact: textworld.logic.Proposition):
-        args = [Variable(_demangle_alfred_name(arg.name), arg.type) for arg in fact.arguments]
-        return Proposition(fact.name, args)
+def clean_alfred_facts(atoms):
 
-    facts = [_clean_fact(fact) for fact in facts if not fact.name.startswith("new-axiom@")]
+    def _clean(atom: Atom):
+        atom_type, rest = atom.name.split(" ", 1)
+        name, rest = rest.split("(", 1)
+        if name.startswith("new-axiom@"):
+            return None
+
+        arguments = rest[:-1].split(", ")
+        fact = "" if atom_type == "Atom" else "!"
+        fact += "{}({})".format(name, ", ".join(map(_demangle_alfred_name, arguments)))
+        return fact
+
+    facts = [_clean(atom) for atom in atoms]
+    facts = sorted(filter(None, facts))
     return facts
 
 
 def run_custom_pddl(args):
-    state = State.from_pddl(args.domain, args.problem)
-    print(state)
-    if args.render:
-        # textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser", save_html="/tmp/plot.html")
-        textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser")
-        # textworld.render.visualize(state, True)
+    downward_lib = fast_downward.load_lib()
 
-    defaults = [7]
+    domain = open(args.domain).read()
+    problem = open(args.problem).read()
+    _, sas = fast_downward.pddl2sas(domain, problem)
+
+    downward_lib.load_sas(sas.encode('utf-8'))
+
     while True:
-        state.print_state()
-        state.all_applicable_actions()
+        print("\n-= STATE =-")
+        state_size = downward_lib.get_state_size()
+        atoms = (Atom * state_size)()
+        downward_lib.get_state(atoms)
+        print("\n".join(sorted(map(str, clean_alfred_facts(atoms)))))
 
-        default = None
-        if defaults:
-            default = defaults.pop()
+        print("\n-= Operators =-")
+        operator_count = downward_lib.get_applicable_operators_count()
+        operators = (Operator * operator_count)()
+        downward_lib.get_applicable_operators(operators)
+        operators = {int(op.id): op for op in operators}
+        pprint(operators)
 
-        value = input("Operation Id [{}]: > ".format(default or ""))
-        if not value:
-            value = default
+        idx = int(input("> "))
 
-        if int(value) == -1:
-            break
+        print("\n-= Effects =-")
+        op = operators[idx]
+        effects = (Atom * op.nb_effect_atoms)()
+        downward_lib.apply_operator(op.id, effects)
+        pprint(list(sorted(map(str, clean_alfred_facts(effects)))))
 
-        state.apply(int(value))
+        input("...")
 
-        if args.render:
-            # textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser", save_html="/tmp/plot.html")
-            textworld.render.show_graph(clean_alfred_facts(state.facts), renderer="browser")
-            # textworld.render.visualize(state, True)
-
-    del state
+    fast_downward.close_lib(downward_lib)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("domain")
+    parser.add_argument("problem")
     parser.add_argument("--render", action="store_true")
-    parser.add_argument("--domain")
-    parser.add_argument("--problem")
     args = parser.parse_args()
 
-    if args.domain is None and args.problem is None:
-        run_textworld_example(args)
-    else:
-        run_custom_pddl(args)
+    run_custom_pddl(args)

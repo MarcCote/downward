@@ -15,7 +15,7 @@
 using namespace std;
 using utils::ExitCode;
 
-bool DEBUG = true;
+bool DEBUG = false;
 
 // Global variables for the stateful library.
 StateID state_id = StateID::no_state;
@@ -119,6 +119,10 @@ extern "C" size_t apply_operator(size_t operator_idx, Atom_t* effects=NULL) {
         for (size_t i=0; i != op_effects.size(); ++i) {
             EffectProxy effect = op_effects[i];
             strcpy(effects[i].name, effect.get_fact().get_name().c_str());
+
+            if (DEBUG) {
+                cout << effects[i].name << endl;
+            }
         }
     }
 

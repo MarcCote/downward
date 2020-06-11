@@ -24,6 +24,7 @@
     (opened ?r - receptacle)                                  ; true if a receptacle is opened
     (inReceptacle ?o - object ?r - receptacle)                ; object ?o is in receptacle ?r
     (checked ?r - receptacle)                                 ; whether the receptacle has been looked inside/visited
+    (examined ?l - location)                                 ; TODO
     (receptacleType ?r - receptacle ?t - rtype)               ; the type of receptacle (Cabinet vs Cabinet|01|2...)
     (objectType ?o - object ?t - otype)                       ; the type of object (Apple vs Apple|01|2...)
     (holds ?a - agent ?o - object)                            ; object ?o is held by agent ?a
@@ -39,19 +40,76 @@
 ;; All actions are specified such that the final arguments are the ones used
 ;; for performing actions in Unity.
 
+
+(:action look
+    :parameters (?a - agent ?l - location)
+    :precondition
+        (and
+            (atLocation ?a ?l)
+        )
+    :effect
+        (and
+            (checked ?l)
+        )
+)
+
+(:action inventory
+    :parameters (?a - agent)
+    :precondition
+        ()
+    :effect
+        (and
+            (checked ?a)
+        )
+)
+
+(:action examineReceptacle
+    :parameters (?a - agent ?r - receptacle)
+    :precondition
+        (and
+            (exists (?l - location)
+                (and
+                    (atLocation ?a ?l)
+                    (receptacleAtLocation ?r ?l)
+                )
+            )
+        )
+    :effect
+        (and
+            (checked ?r)
+        )
+)
+
+; (:action examineObject
+;     :parameters (?a - agent ?o - object)
+;     :precondition
+;         (and
+;             (exists (?l - location)
+;                 (and
+;                     (atLocation ?a ?l)
+;                     (objectAtLocation ?o ?l)
+;                 )
+;             )
+;         )
+;     :effect
+;         (and
+;             (checked ?o)
+;         )
+; )
+
 ;; agent goes to receptacle
  (:action GotoLocation
     :parameters (?a - agent ?lStart - location ?lEnd - location)
     :precondition (atLocation ?a ?lStart)
     :effect (and
-                (atLocation ?a ?lEnd)
                 (not (atLocation ?a ?lStart))
-                (forall (?r - receptacle)
-                    (when (and (receptacleAtLocation ?r ?lEnd)
-                               (or (not (openable ?r)) (opened ?r)))
-                        (checked ?r)
-                    )
-                )
+                (atLocation ?a ?lEnd)
+                ; (forall (?r - receptacle)
+                ;     (when (and (receptacleAtLocation ?r ?lEnd)
+                ;                (or (not (openable ?r)) (opened ?r)))
+                ;         (checked ?r)
+                ;     )
+                ; )
                 ; (increase (total-cost) (distance ?lStart ?lEnd))
                 (increase (total-cost) 1)
             )
@@ -104,6 +162,7 @@
                 (not (inReceptacle ?o ?r))
                 (holds ?a ?o)
                 (holdsAny ?a)
+                (not (objectAtLocation ?o ?l))
                 ;(not (full ?r))
                 (increase (total-cost) 1)
             )
@@ -126,6 +185,8 @@
     :effect (and
                 (holds ?a ?o)
                 (holdsAny ?a)
+                (not (objectAtLocation ?o ?l))
+
                 (increase (total-cost) 1)
             )
  )
