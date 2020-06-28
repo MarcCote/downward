@@ -150,3 +150,9 @@ extern "C" void get_state(Atom_t* atoms) {
             strcpy(atoms[i].name, fact_name.c_str());
     }
 }
+
+
+extern "C" bool check_goal() {
+    GlobalState current_state = state_registry->lookup_state(state_id);
+    return task_properties::is_goal_state(state_registry->get_task_proxy(), current_state);
+}

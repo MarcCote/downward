@@ -125,6 +125,9 @@ def load_lib():
         downward_lib.apply_operator.argtypes = [c_int, POINTER(Atom)]
         downward_lib.apply_operator.restype = int
 
+        downward_lib.check_goal.argtypes = []
+        downward_lib.check_goal.restype = bool
+
     return downward_lib
 
 
