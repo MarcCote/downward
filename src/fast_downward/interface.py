@@ -104,7 +104,7 @@ def load_lib():
             raise RuntimeError("Can't find: {}".format(DOWNWARD_LIB_PATH))
 
         shutil.copyfile(DOWNWARD_LIB_PATH, downward_lib_path)
-        downward_lib = cdll.LoadLibrary(DOWNWARD_LIB_PATH)
+        downward_lib = cdll.LoadLibrary(downward_lib_path)
 
         downward_lib.load_sas.argtypes = [c_char_p]
         downward_lib.load_sas.restype = None
