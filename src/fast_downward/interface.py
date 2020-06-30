@@ -136,12 +136,13 @@ def close_lib(downward_lib):
     dlclose_func(downward_lib._handle)
 
 
-def pddl2sas(domain: str, problem: str) -> str:
+def pddl2sas(domain: str, problem: str, verbose: bool = False) -> str:
     """ Converts a PDDL domain-problem to fast-downward planning task format (SAS).
 
     Arguments:
         domain: text content of the PDDL file describing the domain.
         problem: text content of the PDDL file describing the problem.
+        verbose: display information about PDDL->SAS conversion.
 
     Returns:
         planning task described in the SAS format understood by fast-downward.
@@ -162,7 +163,7 @@ def pddl2sas(domain: str, problem: str) -> str:
     options.invariant_generation_max_candidates = 0
     # options.generate_relaxed_task = True
 
-    with CapturingStdout():
+    with CapturingStdout() as stdout:
         # Load task.
         domain_pddl = lisp_parser.parse_nested_list(domain.split("\n"))
         problem_pddl = lisp_parser.parse_nested_list(problem.split("\n"))
@@ -176,5 +177,8 @@ def pddl2sas(domain: str, problem: str) -> str:
         sas_task.output(sas_io)
         sas_io.seek(0)
         sas = sas_io.read()
+
+    if verbose:
+        print("\n".join(stdout))
 
     return task, sas
