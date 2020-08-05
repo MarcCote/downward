@@ -1,87 +1,158 @@
-import argparse
-import hashlib
-
+import os
+import unittest
+from os.path import join as pjoin
 from pprint import pprint
 
 import fast_downward
 from fast_downward import Atom, Operator
 
 
-def _demangle_alfred_name(text):
-    text = text.replace("_bar_", "|")
-    text = text.replace("_minus_", "-")
-    text = text.replace("_dot_", ".")
-    text = text.replace("_comma_", ",")
-
-    splits = text.split("_", 1)
-    if len(splits) == 1:
-        return text
-
-    name, rest = splits
-    m = hashlib.md5()
-    m.update(rest.encode("utf-8"))
-    return "{}_{}".format(name, m.hexdigest()[:6])
+DATA_PATH = os.path.abspath(pjoin(__file__, '..', "data"))
 
 
-def clean_alfred_facts(atoms):
+class TestInterface(unittest.TestCase):
 
-    def _clean(atom: Atom):
-        atom_type, rest = atom.name.split(" ", 1)
-        name, rest = rest.split("(", 1)
-        if name.startswith("new-axiom@"):
-            return None
+    @classmethod
+    def setUpClass(cls):
+        cls.lib = fast_downward.load_lib()
 
-        arguments = rest[:-1].split(", ")
-        fact = "" if atom_type == "Atom" else "!"
-        fact += "{}({})".format(name, ", ".join(map(_demangle_alfred_name, arguments)))
-        return fact
+        domain = open(pjoin(DATA_PATH, "domain.pddl")).read()
+        problem = open(pjoin(DATA_PATH, "problem.pddl")).read()
+        cls.task, cls.sas = fast_downward.pddl2sas(domain, problem)
 
-    facts = [_clean(atom) for atom in atoms]
-    facts = sorted(filter(None, facts))
-    return facts
+    @classmethod
+    def tearDownClass(cls):
+        fast_downward.close_lib(cls.lib)
 
+    def setUp(self):
+        self.lib.load_sas(self.sas.encode('utf-8'))
 
-def run_custom_pddl(args):
-    downward_lib = fast_downward.load_lib()
+    def test_pddl2sas(self):
+        EXPECTED = [
+            "look",
+            "inventory",
+            "examine",
+            "close",
+            "open",
+            "insert",
+            "put",
+            "drop",
+            "take",
+            "eat",
+            "go-east",
+            "go-north",
+            "go-south",
+            "go-west",
+            "lock",
+            "unlock"
+        ]
+        actions = [a.name for a in self.task.actions]
+        assert set(actions) == set(EXPECTED)
 
-    domain = open(args.domain).read()
-    problem = open(args.problem).read()
-    _, sas = fast_downward.pddl2sas(domain, problem)
+        EXPECTED = [
+            "is_door",
+            "is_room",
+            "is_container",
+            "is_supporter",
+            "is_player",
+            "open",
+            "closed",
+            "locked",
+            "unlocked",
+            "eaten",
+            "examined",
+            "openable",
+            "closable",
+            "lockable",
+            "unlockable",
+            "portable",
+            "moveable",
+            "edible",
+            "visible",
+            "reachable",
+            "at",
+            "in",
+            "on",
+            "free",
+            "link",
+            "match",
+            "north_of",
+            "north_of-d",
+            "west_of",
+            "east_of",
+            "west_of-d"
+        ]
+        predicates = [a.name for a in self.task.predicates]
+        assert set(predicates).issuperset(set(EXPECTED))
 
-    downward_lib.load_sas(sas.encode('utf-8'))
-
-    while True:
-        print("\n-= STATE =-")
-        state_size = downward_lib.get_state_size()
+    def test_get_state(self):
+        state_size = self.lib.get_state_size()
         atoms = (Atom * state_size)()
-        downward_lib.get_state(atoms)
-        print("\n".join(sorted(map(str, clean_alfred_facts(atoms)))))
+        self.lib.get_state(atoms)
 
-        print("\n-= Operators =-")
-        operator_count = downward_lib.get_applicable_operators_count()
+        EXPECTED = [
+            "Atom at(c_0, r_1)",
+            "Atom at(p, r_0)",
+            "Atom at(s_0, r_0)",
+            "Atom closed(c_0)",
+            "Atom closed(d_0)",
+            "Atom in(t_0, p)",
+            "Atom reachable(p, d_0)",
+            "Atom reachable(p, s_0)",
+            "Atom reachable(p, t_0)",
+            "Atom visible(p, d_0)",
+            "Atom visible(p, p)",
+            "Atom visible(p, s_0)",
+            "Atom visible(p, t_0)"
+        ]
+        assert set(map(str, atoms)).issuperset(set(EXPECTED))
+
+    def test_get_applicable_operators(self):
+        operator_count = self.lib.get_applicable_operators_count()
         operators = (Operator * operator_count)()
-        downward_lib.get_applicable_operators(operators)
+        self.lib.get_applicable_operators(operators)
+        operators = {int(op.id): op.name for op in operators}
+        #pprint(operators)
+        EXPECTED = [
+            "drop p r_0 t_0",
+            "examine p d_0",
+            "examine p p",
+            "examine p s_0",
+            "examine p t_0",
+            "inventory p",
+            "look p r_0",
+            "open p d_0",
+            "put p s_0 t_0"
+        ]
+        assert set(map(str, operators.values())) == set(EXPECTED)
+
+    def test_apply_operator(self):
+        operator_count = self.lib.get_applicable_operators_count()
+        operators = (Operator * operator_count)()
+        self.lib.get_applicable_operators(operators)
         operators = {int(op.id): op for op in operators}
-        pprint(operators)
+        # pprint(operators)
+        op = operators[2]
+        assert op.name == "drop p r_0 t_0"
 
-        idx = int(input("> "))
-
-        print("\n-= Effects =-")
-        op = operators[idx]
         effects = (Atom * op.nb_effect_atoms)()
-        downward_lib.apply_operator(op.id, effects)
-        pprint(list(sorted(map(str, clean_alfred_facts(effects)))))
+        self.lib.apply_operator(op.id, effects)
+        # pprint(list(sorted(map(str, effects))))
+        EXPECTED = ['Atom at(t_0, r_0)', 'NegatedAtom in(t_0, p)']
+        assert set(map(str, effects)) == set(EXPECTED)
 
-        input("...")
+    def test_check_goal(self):
+        WALKTHROUGH = [16, 9, 15, 4, 6]
+        for op_id in WALKTHROUGH:
+            assert not self.lib.check_goal()
 
-    fast_downward.close_lib(downward_lib)
+            operator_count = self.lib.get_applicable_operators_count()
+            operators = (Operator * operator_count)()
+            self.lib.get_applicable_operators(operators)
+            operators = {int(op.id): op for op in operators}
+            op = operators[op_id]
 
+            effects = (Atom * op.nb_effect_atoms)()
+            self.lib.apply_operator(op.id, effects)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("domain")
-    parser.add_argument("problem")
-    parser.add_argument("--render", action="store_true")
-    args = parser.parse_args()
-
-    run_custom_pddl(args)
+        assert self.lib.check_goal()
