@@ -20,7 +20,7 @@ bool DEBUG = false;
 // Global variables for the stateful library.
 StateID state_id = StateID::no_state;
 StateRegistry* state_registry = nullptr;
-
+vector<OperatorID> applicable_ops;
 
 typedef struct Operator_t {
     int id;
@@ -75,9 +75,11 @@ extern "C" int load_sas(char* input) {
 
 
 extern "C" int get_applicable_operators_count() {
-    vector<OperatorID> applicable_ops;
-    successor_generator::SuccessorGenerator successor_generator(state_registry->get_task_proxy());
+    successor_generator::SuccessorGenerator &successor_generator = successor_generator::g_successor_generators[state_registry->get_task_proxy()];
+
     GlobalState current_state = state_registry->lookup_state(state_id);
+    current_state = state_registry->lookup_state(state_id);
+    applicable_ops.clear();
     successor_generator.generate_applicable_ops(current_state, applicable_ops);
 
     if (DEBUG) {
@@ -90,11 +92,6 @@ extern "C" int get_applicable_operators_count() {
 
 extern "C" void get_applicable_operators(Operator_t* operators) {
     OperatorsProxy global_operators = state_registry->get_task_proxy().get_operators();
-    vector<OperatorID> applicable_ops;
-    successor_generator::SuccessorGenerator successor_generator(state_registry->get_task_proxy());
-
-    GlobalState current_state = state_registry->lookup_state(state_id);
-    successor_generator.generate_applicable_ops(current_state, applicable_ops);
 
     for (size_t i=0; i != applicable_ops.size(); ++i) {
         OperatorID op_id = applicable_ops[i];
