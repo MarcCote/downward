@@ -156,3 +156,43 @@ class TestInterface(unittest.TestCase):
             self.lib.apply_operator(op.id, effects)
 
         assert self.lib.check_goal()
+
+    def test_solve(self):
+        WALKTHROUGH = [16, 9, 15, 4, 6]
+        for op_id in WALKTHROUGH:
+            assert self.lib.solve(False)
+            operators = (Operator * self.lib.get_last_plan_length())()
+            self.lib.get_last_plan(operators)
+            operators = [op.name for op in operators]
+            pprint(operators)
+
+            operator_count = self.lib.get_applicable_operators_count()
+            operators = (Operator * operator_count)()
+            self.lib.get_applicable_operators(operators)
+            operators = {int(op.id): op for op in operators}
+            op = operators[op_id]
+
+            effects = (Atom * op.nb_effect_atoms)()
+            self.lib.apply_operator(op.id, effects)
+
+        assert self.lib.solve(False)
+
+
+def test_solve():
+    domain = open(pjoin(DATA_PATH, "domain.pddl")).read()
+    problem = open(pjoin(DATA_PATH, "problem.pddl")).read()
+    EXPECTED = ['inventory p', 'open p d_0', 'go-east p r_0 r_1', 'examine p c_0']
+    operators = fast_downward.solve_pddl(domain, problem, verbose=False)
+    assert operators == EXPECTED
+
+    # Test calling a second to make sure global variables have been taken care of.
+    operators = fast_downward.solve_pddl(domain, problem, verbose=False)
+    assert operators == EXPECTED
+
+if __name__ == "__main__":
+    test_solve()
+
+    # TestInterface.setUpClass()
+    # case = TestInterface()
+    # case.setUp()
+    # case.test_solve()

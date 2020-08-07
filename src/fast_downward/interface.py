@@ -4,9 +4,11 @@ import sys
 import shutil
 import tempfile
 
+from typing import List
+
 from ctypes import cdll, CDLL
 from ctypes import Structure
-from ctypes import POINTER, c_void_p, c_char, c_int, c_char_p
+from ctypes import POINTER, c_void_p, c_char, c_int, c_char_p, c_bool
 
 from pkg_resources import Requirement, resource_filename
 
@@ -128,7 +130,35 @@ def load_lib():
         downward_lib.check_goal.argtypes = []
         downward_lib.check_goal.restype = bool
 
+        downward_lib.solve.argtypes = [c_bool]
+        downward_lib.solve.restype = bool
+
+        downward_lib.get_last_plan_length.argtypes = []
+        downward_lib.get_last_plan_length.restype = int
+
+        downward_lib.get_last_plan.argtypes = [POINTER(Operator)]
+        downward_lib.get_last_plan.restype = None
+
     return downward_lib
+
+
+def solve_pddl(domain: str, problem: str, verbose=False) -> List[str]:
+
+    with CapturingStdout() as stdout:
+        lib = load_lib()
+        _, sas = pddl2sas(domain, problem)
+        lib.load_sas(sas.encode('utf-8'))
+        if not lib.solve(verbose):
+            return None
+
+        operators = (Operator * lib.get_last_plan_length())()
+        lib.get_last_plan(operators)
+        operators = [op.name for op in operators]
+
+    if verbose:
+        print("\n".join(stdout))
+
+    return operators
 
 
 def close_lib(downward_lib):

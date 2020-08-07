@@ -88,6 +88,7 @@ fast_downward_plugin(
     HELP "FastDownward as a library"
     SOURCES
         interface
+    DEPENDS PLUGIN_ASTAR PLUGIN_LAZY_GREEDY
 )
 
 fast_downward_plugin(

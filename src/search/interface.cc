@@ -1,11 +1,16 @@
 #include "command_line.h"
 #include "option_parser.h"
 #include "search_engine.h"
+#include "search_engines/search_common.h"
+#include "search_engines/eager_search.h"
+#include "search_engines/lazy_search.h"
+#include "../evaluators/g_evaluator.h"
 
 #include "options/registries.h"
 #include "tasks/root_task.h"
 #include "task_utils/task_properties.h"
 #include "utils/system.h"
+#include "utils/logging.h"
 #include "utils/timer.h"
 #include "task_utils/successor_generator.h"
 
@@ -21,6 +26,8 @@ bool DEBUG = false;
 StateID state_id = StateID::no_state;
 StateRegistry* state_registry = nullptr;
 vector<OperatorID> applicable_ops;
+vector<OperatorID> last_plan;
+
 
 typedef struct Operator_t {
     int id;
@@ -152,4 +159,88 @@ extern "C" void get_state(Atom_t* atoms) {
 extern "C" bool check_goal() {
     GlobalState current_state = state_registry->lookup_state(state_id);
     return task_properties::is_goal_state(state_registry->get_task_proxy(), current_state);
+}
+
+extern "C" bool solve(bool verbose=false) {
+    last_plan.clear();
+
+    Options opts;
+    vector<shared_ptr<Evaluator>> evals;
+    vector<shared_ptr<Evaluator>> preferred;
+    evals.push_back(make_shared<g_evaluator::GEvaluator>());
+    opts.set<vector<shared_ptr<Evaluator>>>("evals", evals);
+    opts.set<vector<shared_ptr<Evaluator>>>("preferred", preferred);
+    opts.set<int>("cost_type", (int) OperatorCost::NORMAL);
+    opts.set<int>("bound", 2147483647);
+    opts.set<double>("max_time", INFINITY);
+    opts.set<bool>("reopen_closed", false);
+    opts.set<bool>("randomize_successors", false);
+    opts.set<bool>("preferred_successors_first", false);
+    opts.set<int>("random_seed", -1);
+    opts.set<int>("boost", 1000);
+    opts.set<int>("verbosity", verbose ? (int) utils::Verbosity::NORMAL : (int) utils::Verbosity::SILENT);
+    opts.set<shared_ptr<OpenListFactory>>("open", search_common::create_greedy_open_list_factory(opts));
+
+    lazy_search::LazySearch engine(opts);
+
+    // Using the command line (WARNING: The singleton RawRegistry::instance() doesn't like to be use twice to parse command line).
+    // int argc = 3;  // Make sure this value matches the length of argv below.
+    // //const char* argv[] = {"fastdownward", "--search", "astar(cegar())"};
+    // const char* argv[] = {"fastdownward", "--search", (verbose ? "lazy_greedy([g])" : "lazy_greedy([g], verbosity=silent)")};
+
+    // bool unit_cost = task_properties::is_unit_cost(task_proxy);
+    // shared_ptr<SearchEngine> engine;
+    // try {
+    //     cout << "#######################" << endl;
+    //     options::Registry registry(*options::RawRegistry::instance());
+    //     cout << "#######################" << endl;
+    //     // parse_cmd_line(argc, argv, registry, true, unit_cost);
+    //     engine = parse_cmd_line(argc, argv, registry, false, unit_cost);
+    // } catch (const ArgError &error) {
+    //     error.print();
+    //     usage(argv[0]);
+    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
+    // } catch (const OptionParserError &error) {
+    //     error.print();
+    //     usage(argv[0]);
+    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
+    // } catch (const ParseError &error) {
+    //     error.print();
+    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
+    // }
+
+    engine.search();
+
+    if (engine.found_solution()) {
+        if (DEBUG) {
+            cout << "Solution found!" << endl;
+        }
+
+        TaskProxy task_proxy(*tasks::g_root_task);
+        OperatorsProxy operators = task_proxy.get_operators();
+        for (OperatorID op_id : engine.get_plan()) {
+            last_plan.push_back(op_id);
+            if (DEBUG) {
+                cout << operators[op_id].get_name() << " (" << operators[op_id].get_cost() << ")" << endl;
+            }
+        }
+    }
+
+    return engine.found_solution();
+}
+
+extern "C" int get_last_plan_length() {
+    return last_plan.size();
+}
+
+extern "C" void get_last_plan(Operator_t* operators) {
+    OperatorsProxy global_operators = state_registry->get_task_proxy().get_operators();
+
+    for (size_t i=0; i != last_plan.size(); ++i) {
+        OperatorID op_id = last_plan[i];
+        OperatorProxy op = global_operators[op_id];
+        operators[i].id = op_id.hash();
+        operators[i].nb_effect_atoms = op.get_effects().size();
+        strcpy(operators[i].name, op.get_name().c_str());
+    }
 }
