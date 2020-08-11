@@ -162,6 +162,8 @@ extern "C" bool check_goal() {
 }
 
 extern "C" bool solve(bool verbose=false) {
+    utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
+
     last_plan.clear();
 
     Options opts;
@@ -170,7 +172,7 @@ extern "C" bool solve(bool verbose=false) {
     evals.push_back(make_shared<g_evaluator::GEvaluator>());
     opts.set<vector<shared_ptr<Evaluator>>>("evals", evals);
     opts.set<vector<shared_ptr<Evaluator>>>("preferred", preferred);
-    opts.set<int>("cost_type", (int) OperatorCost::NORMAL);
+    opts.set<OperatorCost>("cost_type", OperatorCost::NORMAL);
     opts.set<int>("bound", 2147483647);
     opts.set<double>("max_time", INFINITY);
     opts.set<bool>("reopen_closed", false);
@@ -178,7 +180,7 @@ extern "C" bool solve(bool verbose=false) {
     opts.set<bool>("preferred_successors_first", false);
     opts.set<int>("random_seed", -1);
     opts.set<int>("boost", 1000);
-    opts.set<int>("verbosity", verbose ? (int) utils::Verbosity::NORMAL : (int) utils::Verbosity::SILENT);
+    opts.set<utils::Verbosity>("verbosity", verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
     opts.set<shared_ptr<OpenListFactory>>("open", search_common::create_greedy_open_list_factory(opts));
 
     lazy_search::LazySearch engine(opts);
