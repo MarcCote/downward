@@ -17,6 +17,14 @@ if not os.path.isfile(libdownward):
 
 shutil.copy(libdownward, "src/fast_downward/libdownward.so")
 
+if os.path.exists("src/fast_downward/translate"):
+    os.unlink("src/fast_downward/translate")
+os.symlink("../translate", "src/fast_downward/translate", target_is_directory=True)
+
+if os.path.exists("src/fast_downward/driver"):
+    os.unlink("src/fast_downward/driver")
+os.symlink("../../driver", "src/fast_downward/driver", target_is_directory=True)
+
 setup(
     name='fast_downward',
     version=open(pjoin("driver", "version.py")).readlines()[-1].split("=")[-1].strip('+" \n'),
