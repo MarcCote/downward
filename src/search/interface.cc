@@ -27,6 +27,7 @@ StateID state_id = StateID::no_state;
 StateRegistry* state_registry = nullptr;
 vector<OperatorID> applicable_ops;
 vector<OperatorID> last_plan;
+string sas;
 
 
 typedef struct Operator_t {
@@ -43,7 +44,6 @@ typedef struct Atom_t {
 
 extern "C" void cleanup() {
     if(DEBUG) {
-        utils::register_event_handlers();
         cout << "cleaning " << state_registry << "... ";
     }
 
@@ -52,7 +52,6 @@ extern "C" void cleanup() {
     tasks::g_root_task = nullptr;
 
     if(DEBUG) {
-        utils::register_event_handlers();
         cout << "done" << endl;
     }
 }
@@ -62,12 +61,12 @@ extern "C" int load_sas(char* input) {
     if (state_registry)
         cleanup();  // Delete existing state_registry.
 
-    istringstream str(input);
+    sas = string(input);
     if(DEBUG) {
-        utils::register_event_handlers();
         cout << "Loading SAS... [t=" << utils::g_timer << "]" << endl;
     }
-    tasks::read_root_task(str);
+    istringstream in(sas);
+    tasks::read_root_task(in);
 
     if (DEBUG) {
         cout << "Loading SAS... Done [t=" << utils::g_timer << "]" << endl;
@@ -161,6 +160,7 @@ extern "C" bool check_goal() {
     return task_properties::is_goal_state(state_registry->get_task_proxy(), current_state);
 }
 
+
 extern "C" bool solve(bool verbose=false) {
     utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
 
@@ -183,33 +183,13 @@ extern "C" bool solve(bool verbose=false) {
     opts.set<utils::Verbosity>("verbosity", verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
     opts.set<shared_ptr<OpenListFactory>>("open", search_common::create_greedy_open_list_factory(opts));
 
+    // Change root task to start the search from a new state.
+    auto root_task_bkp = tasks::g_root_task;
+    tasks::g_root_task = nullptr;
+    istringstream in(sas);
+    GlobalState current_state = state_registry->lookup_state(state_id);
+    tasks::read_root_task(in, current_state);
     lazy_search::LazySearch engine(opts);
-
-    // Using the command line (WARNING: The singleton RawRegistry::instance() doesn't like to be use twice to parse command line).
-    // int argc = 3;  // Make sure this value matches the length of argv below.
-    // //const char* argv[] = {"fastdownward", "--search", "astar(cegar())"};
-    // const char* argv[] = {"fastdownward", "--search", (verbose ? "lazy_greedy([g])" : "lazy_greedy([g], verbosity=silent)")};
-
-    // bool unit_cost = task_properties::is_unit_cost(task_proxy);
-    // shared_ptr<SearchEngine> engine;
-    // try {
-    //     cout << "#######################" << endl;
-    //     options::Registry registry(*options::RawRegistry::instance());
-    //     cout << "#######################" << endl;
-    //     // parse_cmd_line(argc, argv, registry, true, unit_cost);
-    //     engine = parse_cmd_line(argc, argv, registry, false, unit_cost);
-    // } catch (const ArgError &error) {
-    //     error.print();
-    //     usage(argv[0]);
-    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
-    // } catch (const OptionParserError &error) {
-    //     error.print();
-    //     usage(argv[0]);
-    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
-    // } catch (const ParseError &error) {
-    //     error.print();
-    //     utils::exit_with(ExitCode::SEARCH_INPUT_ERROR);
-    // }
 
     engine.search();
 
@@ -227,6 +207,9 @@ extern "C" bool solve(bool verbose=false) {
             }
         }
     }
+
+    // Restore root task.
+    tasks::g_root_task = root_task_bkp;
 
     return engine.found_solution();
 }
