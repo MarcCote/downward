@@ -375,10 +375,22 @@ RootTask::RootTask(istream &in, const GlobalState &state) {
     }
     check_magic(in, "end_state");
 
-    // Overwrite initial_state_values.
-    initial_state_values = state.unpack().get_values();
-
+    // Overwrite initial_state_values based on the provided state.
     for (int i = 0; i < num_variables; ++i) {
+        bool match_found = false;
+        for (FactProxy fact : state.unpack()) {
+
+            for (string name : variables[i].fact_names) {
+                if (fact.get_name() == name) {
+                    initial_state_values[i] = fact.get_value();
+                    match_found = true;
+                    break;
+                }
+            }
+
+            if (match_found) break;
+        }
+
         variables[i].axiom_default_value = initial_state_values[i];
     }
 

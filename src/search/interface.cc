@@ -26,8 +26,9 @@ bool DEBUG = false;
 StateID state_id = StateID::no_state;
 StateRegistry* state_registry = nullptr;
 vector<OperatorID> applicable_ops;
-vector<OperatorID> last_plan;
 string sas;
+string sas_replan;
+vector<tuple<int, string, int>> last_plan;
 
 
 typedef struct Operator_t {
@@ -76,6 +77,12 @@ extern "C" int load_sas(char* input) {
     state_registry = new StateRegistry(global_task_proxy);
     GlobalState current_state = state_registry->get_initial_state();
     state_id = current_state.get_id();
+    return true;
+}
+
+
+extern "C" int load_sas_replan(char* input) {
+    sas_replan = string(input);
     return true;
 }
 
@@ -161,6 +168,150 @@ extern "C" bool check_goal() {
 }
 
 
+extern "C" bool check_solution(size_t size, Operator_t* operators) {
+
+    OperatorsProxy global_operators = state_registry->get_task_proxy().get_operators();
+    GlobalState current_state = state_registry->lookup_state(state_id);
+    GlobalState new_state = state_registry->lookup_state(state_id);
+    for (size_t i = 0; i != size; ++i) {
+        OperatorProxy op = global_operators[operators[i].id];
+        if (DEBUG) {
+            cout << "idx:" << op.get_id() << op.get_name() << endl;
+        }
+
+        if (!task_properties::is_applicable(op, current_state.unpack()))
+            return false;
+
+        current_state = state_registry->get_successor_state(current_state, op);
+    }
+
+    return task_properties::is_goal_state(state_registry->get_task_proxy(), current_state);
+}
+
+
+extern "C" int get_operator_id_from_name(char* name) {
+
+    OperatorsProxy global_operators = state_registry->get_task_proxy().get_operators();
+    for (OperatorProxy op : global_operators) {
+        // cout << op.get_name() << "\n" << name << "\n---\n" << endl;
+
+        if (strcmp(name, op.get_name().c_str()) == 0) {
+            return op.get_id();
+        }
+    }
+
+    return -1;
+}
+
+
+
+
+extern "C" bool solve_sas(char* input, bool verbose=false) {
+    utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
+
+    last_plan.clear();
+
+    Options opts;
+    vector<shared_ptr<Evaluator>> evals;
+    vector<shared_ptr<Evaluator>> preferred;
+    evals.push_back(make_shared<g_evaluator::GEvaluator>());
+    opts.set<vector<shared_ptr<Evaluator>>>("evals", evals);
+    opts.set<vector<shared_ptr<Evaluator>>>("preferred", preferred);
+    opts.set<OperatorCost>("cost_type", OperatorCost::NORMAL);
+    opts.set<int>("bound", 2147483647);
+    opts.set<double>("max_time", INFINITY);
+    opts.set<bool>("reopen_closed", false);
+    opts.set<bool>("randomize_successors", false);
+    opts.set<bool>("preferred_successors_first", false);
+    opts.set<int>("random_seed", -1);
+    opts.set<int>("boost", 1000);
+    opts.set<utils::Verbosity>("verbosity", verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
+    opts.set<shared_ptr<OpenListFactory>>("open", search_common::create_greedy_open_list_factory(opts));
+
+    // Change root task to start the search from a new state.
+    auto root_task_bkp = tasks::g_root_task;
+    tasks::g_root_task = nullptr;
+    istringstream in(input);
+    tasks::read_root_task(in);
+
+    lazy_search::LazySearch engine(opts);
+
+    utils::Timer search_timer;
+    engine.search();
+    search_timer.stop();
+    utils::g_log << "Search time: " << search_timer << endl;
+
+    if (engine.found_solution()) {
+        utils::g_log << "Solution found!" << endl;
+
+        TaskProxy task_proxy(*tasks::g_root_task);
+        OperatorsProxy operators = task_proxy.get_operators();
+        for (OperatorID op_id : engine.get_plan()) {
+            OperatorProxy op = operators[op_id];
+            last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
+        }
+    }
+
+    // Restore root task.
+    tasks::g_root_task = root_task_bkp;
+
+    return engine.found_solution();
+}
+
+extern "C" bool replan(bool verbose=false) {
+    utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
+
+    last_plan.clear();
+
+    Options opts;
+    vector<shared_ptr<Evaluator>> evals;
+    vector<shared_ptr<Evaluator>> preferred;
+    evals.push_back(make_shared<g_evaluator::GEvaluator>());
+    opts.set<vector<shared_ptr<Evaluator>>>("evals", evals);
+    opts.set<vector<shared_ptr<Evaluator>>>("preferred", preferred);
+    opts.set<OperatorCost>("cost_type", OperatorCost::NORMAL);
+    opts.set<int>("bound", 2147483647);
+    opts.set<double>("max_time", INFINITY);
+    opts.set<bool>("reopen_closed", false);
+    opts.set<bool>("randomize_successors", false);
+    opts.set<bool>("preferred_successors_first", false);
+    opts.set<int>("random_seed", -1);
+    opts.set<int>("boost", 1000);
+    opts.set<utils::Verbosity>("verbosity", verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
+    opts.set<shared_ptr<OpenListFactory>>("open", search_common::create_greedy_open_list_factory(opts));
+
+    // Change root task to start the search from a new state.
+    auto root_task_bkp = tasks::g_root_task;
+    tasks::g_root_task = nullptr;
+    istringstream in(sas_replan);
+    GlobalState current_state = state_registry->lookup_state(state_id);
+    tasks::read_root_task(in, current_state);
+
+    lazy_search::LazySearch engine(opts);
+
+    utils::Timer search_timer;
+    engine.search();
+    search_timer.stop();
+    utils::g_log << "Search time: " << search_timer << endl;
+
+    if (engine.found_solution()) {
+        utils::g_log << "Solution found!" << endl;
+
+        TaskProxy task_proxy(*tasks::g_root_task);
+        OperatorsProxy operators = task_proxy.get_operators();
+        for (OperatorID op_id : engine.get_plan()) {
+            OperatorProxy op = operators[op_id];
+            last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
+        }
+    }
+
+    // Restore root task.
+    tasks::g_root_task = root_task_bkp;
+
+    return engine.found_solution();
+}
+
+
 extern "C" bool solve(bool verbose=false) {
     utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
 
@@ -191,20 +342,19 @@ extern "C" bool solve(bool verbose=false) {
     tasks::read_root_task(in, current_state);
     lazy_search::LazySearch engine(opts);
 
+    utils::Timer search_timer;
     engine.search();
+    search_timer.stop();
+    utils::g_log << "Search time: " << search_timer << endl;
 
     if (engine.found_solution()) {
-        if (DEBUG) {
-            cout << "Solution found!" << endl;
-        }
+        utils::g_log << "Solution found!" << endl;
 
         TaskProxy task_proxy(*tasks::g_root_task);
         OperatorsProxy operators = task_proxy.get_operators();
         for (OperatorID op_id : engine.get_plan()) {
-            last_plan.push_back(op_id);
-            if (DEBUG) {
-                cout << operators[op_id].get_name() << " (" << operators[op_id].get_cost() << ")" << endl;
-            }
+            OperatorProxy op = operators[op_id];
+            last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
         }
     }
 
@@ -219,13 +369,9 @@ extern "C" int get_last_plan_length() {
 }
 
 extern "C" void get_last_plan(Operator_t* operators) {
-    OperatorsProxy global_operators = state_registry->get_task_proxy().get_operators();
-
     for (size_t i=0; i != last_plan.size(); ++i) {
-        OperatorID op_id = last_plan[i];
-        OperatorProxy op = global_operators[op_id];
-        operators[i].id = op_id.hash();
-        operators[i].nb_effect_atoms = op.get_effects().size();
-        strcpy(operators[i].name, op.get_name().c_str());
+        operators[i].id = get<0>(last_plan[i]);
+        strcpy(operators[i].name, get<1>(last_plan[i]).c_str());
+        operators[i].nb_effect_atoms = get<2>(last_plan[i]);
     }
 }

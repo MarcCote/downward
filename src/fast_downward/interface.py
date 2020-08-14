@@ -50,10 +50,10 @@ class Operator(Structure):
         ("nb_effect_atoms", c_int),
     ]
 
-    def __init__(self):
-        self.id = -1
-        self.nb_effect_atoms = 0
-        self._name = ""
+    def __init__(self, id=-1, name=b"", nb_effect_atoms=0):
+        self.id = id
+        self.nb_effect_atoms = nb_effect_atoms
+        self._name = name
 
     def __str__(self):
         return "Id {}:\t{}".format(self.id, self.name)
@@ -111,6 +111,9 @@ def load_lib():
         downward_lib.load_sas.argtypes = [c_char_p]
         downward_lib.load_sas.restype = None
 
+        downward_lib.load_sas_replan.argtypes = [c_char_p]
+        downward_lib.load_sas_replan.restype = None
+
         downward_lib.cleanup.argtypes = []
         downward_lib.cleanup.restype = None
 
@@ -133,31 +136,89 @@ def load_lib():
         downward_lib.solve.argtypes = [c_bool]
         downward_lib.solve.restype = bool
 
+        downward_lib.solve_sas.argtypes = [c_char_p, c_bool]
+        downward_lib.solve_sas.restype = bool
+
+        downward_lib.replan.argtypes = [c_bool]
+        downward_lib.replan.restype = bool
+
         downward_lib.get_last_plan_length.argtypes = []
         downward_lib.get_last_plan_length.restype = int
 
         downward_lib.get_last_plan.argtypes = [POINTER(Operator)]
         downward_lib.get_last_plan.restype = None
 
+        downward_lib.check_solution.argtypes = [c_int, POINTER(Operator)]
+        downward_lib.check_solution.restype = bool
+
     return downward_lib
 
 
-def solve_pddl(domain: str, problem: str, verbose=False) -> List[str]:
+def compress_plan(lib, plan):
 
-    with CapturingStdout() as stdout:
-        lib = load_lib()
-        _, sas = pddl2sas(domain, problem)
-        lib.load_sas(sas.encode('utf-8'))
-        if not lib.solve(verbose):
-            return None
+    if lib.check_solution(len(plan), plan):
+        return plan
 
-        operators = (Operator * lib.get_last_plan_length())()
-        lib.get_last_plan(operators)
-        operators = [op.name for op in operators]
+    def _find_shorter_plan(plan):
+        for j in range(0, len(plan)):
+            for i in range(j + 1, len(plan))[::-1]:
+                shorter_plan = plan[:j] + plan[i:]
+                shorter_plan = (Operator * len(shorter_plan))(*shorter_plan)
+                if lib.check_solution(len(shorter_plan), shorter_plan):
+                    return shorter_plan
 
-    if verbose:
-        print("\n".join(stdout))
+        return None
 
+    shorter_plan = _find_shorter_plan(plan)
+    if shorter_plan:
+        return shorter_plan
+
+    # Try recovering from the last operation.
+    operators = (Operator * lib.get_applicable_operators_count())()
+    lib.get_applicable_operators(operators)
+
+    # print("Operators:\n -> " +"\n -> ".join(_demangle_alfred_name(op.name) for op in operators))
+
+    plan = list(plan)
+    for operator in operators:
+        new_plan = [operator] + plan
+        new_plan = (Operator * len(new_plan))(*new_plan)
+
+        if lib.check_solution(len(new_plan), new_plan):
+            return new_plan
+
+        shorter_plan = _find_shorter_plan(new_plan)
+        if shorter_plan:
+            return shorter_plan
+
+    # assert False
+    return None
+
+
+def names2operators(lib, cmds):
+    operators = (Operator * len(cmds))()
+    for operator, cmd in zip(operators, cmds):
+        operator.id = lib.get_operator_id_from_name(cmd.encode())
+        operator._name = cmd.encode()
+        assert operator.id > -1
+
+    return operators
+
+
+def solve_pddl(domain: str, problem: str, verbose=False, return_raw_operators=False) -> List[str]:
+
+    lib = load_lib()
+    _, sas = pddl2sas(domain, problem, verbose=verbose, optimize=True)
+    if not lib.solve_sas(sas.encode('utf-8'), verbose):
+        return None
+
+    operators = (Operator * lib.get_last_plan_length())()
+    lib.get_last_plan(operators)
+
+    if return_raw_operators:
+        return operators
+
+    operators = [op.name for op in operators]
     return operators
 
 
@@ -166,7 +227,7 @@ def close_lib(downward_lib):
     dlclose_func(downward_lib._handle)
 
 
-def pddl2sas(domain: str, problem: str, verbose: bool = False) -> str:
+def pddl2sas(domain: str, problem: str, verbose: bool = False, optimize=False) -> str:
     """ Converts a PDDL domain-problem to fast-downward planning task format (SAS).
 
     Arguments:
@@ -185,13 +246,24 @@ def pddl2sas(domain: str, problem: str, verbose: bool = False) -> str:
     from fast_downward.translate import translate
     from fast_downward.translate.pddl_parser import lisp_parser, parsing_functions
 
-    options.filter_unimportant_vars = False
-    options.filter_unreachable_facts = False
-    options.use_partial_encoding = False
-    options.skip_variable_reordering = True
-    options.add_implied_preconditions = False
-    options.invariant_generation_max_candidates = 0
-    # options.generate_relaxed_task = True
+    if optimize:
+        # Optimize translation for faster search.
+        options.filter_unimportant_vars = True
+        options.filter_unreachable_facts = True
+        options.use_partial_encoding = True
+        options.skip_variable_reordering = False
+        options.add_implied_preconditions = True
+        options.invariant_generation_max_candidates = 0
+        # options.generate_relaxed_task = True
+    else:
+        # Do not optimize translation to avoid pruning operators and facts.
+        options.filter_unimportant_vars = False
+        options.filter_unreachable_facts = False
+        options.use_partial_encoding = False
+        options.skip_variable_reordering = True
+        options.add_implied_preconditions = False
+        options.invariant_generation_max_candidates = 0
+        # options.generate_relaxed_task = True
 
     with CapturingStdout() as stdout:
         # Load task.
