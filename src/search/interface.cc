@@ -204,8 +204,6 @@ extern "C" int get_operator_id_from_name(char* name) {
 }
 
 
-
-
 extern "C" bool solve_sas(char* input, bool verbose=false) {
     utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
 
@@ -245,12 +243,13 @@ extern "C" bool solve_sas(char* input, bool verbose=false) {
     utils::g_log << "Search time: " << search_timer << endl;
 
     if (engine.found_solution()) {
-        utils::g_log << "Solution found!" << endl;
+        utils::g_log << "Solution found (" << engine.get_plan().size() << " operators)!" << endl;
 
         TaskProxy task_proxy(*tasks::g_root_task);
         OperatorsProxy operators = task_proxy.get_operators();
         for (OperatorID op_id : engine.get_plan()) {
             OperatorProxy op = operators[op_id];
+            utils::g_log << "\t" << op.get_name() << endl;
             last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
         }
     }
@@ -260,6 +259,7 @@ extern "C" bool solve_sas(char* input, bool verbose=false) {
 
     return engine.found_solution();
 }
+
 
 extern "C" bool replan(bool verbose=false) {
     utils::g_log.set_verbosity(verbose ? utils::Verbosity::NORMAL : utils::Verbosity::SILENT);
@@ -301,12 +301,13 @@ extern "C" bool replan(bool verbose=false) {
     utils::g_log << "Search time: " << search_timer << endl;
 
     if (engine.found_solution()) {
-        utils::g_log << "Solution found!" << endl;
+        utils::g_log << "Solution found (" << engine.get_plan().size() << " operators)!" << endl;
 
         TaskProxy task_proxy(*tasks::g_root_task);
         OperatorsProxy operators = task_proxy.get_operators();
         for (OperatorID op_id : engine.get_plan()) {
             OperatorProxy op = operators[op_id];
+            utils::g_log << "\t" << op.get_name() << endl;
             last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
         }
     }
@@ -363,6 +364,7 @@ extern "C" bool solve(bool verbose=false) {
         OperatorsProxy operators = task_proxy.get_operators();
         for (OperatorID op_id : engine.get_plan()) {
             OperatorProxy op = operators[op_id];
+            utils::g_log << "\t" << op.get_name() << endl;
             last_plan.push_back(make_tuple(op_id.hash(), op.get_name(), op.get_effects().size()));
         }
     }
@@ -373,9 +375,11 @@ extern "C" bool solve(bool verbose=false) {
     return engine.found_solution();
 }
 
+
 extern "C" int get_last_plan_length() {
     return last_plan.size();
 }
+
 
 extern "C" void get_last_plan(Operator_t* operators) {
     for (size_t i=0; i != last_plan.size(); ++i) {

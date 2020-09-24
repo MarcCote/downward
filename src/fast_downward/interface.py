@@ -154,8 +154,28 @@ def load_lib():
     return downward_lib
 
 
-def compress_plan(lib, plan):
+def update_plan(lib, plan):
+    """ Update an existing plan to reflect recent changes to the planner's state.
 
+    This function assumes `plan` was a valid plan before the planner's state changed.
+    To find an updated plan, this function uses the following heuristic to find a new plan:
+
+        1. Check if the plan is still valid as it is.
+        2. Check if a subsequence of operators (i.e., `plan[i:j]`) leads to a solution.
+        3. Try to augment the plan with a valid operator to undo previous changes
+           (i.e., `[valid_operator] + plan`).
+        4. Return `None` to let the user know, we couldn't find a working plan.
+
+    Arguments:
+        lib: handle to the downward library (i.e., object returned by `load_lib()`).
+        plan: sequence of operators leading to a solution.
+
+    Returns:
+        Sequence of operators representing the updated plan.
+        `None`, if it can't *heuristically* find a plan leading to a solution.
+    """
+
+    # Check if the existing plan still works.
     if lib.check_solution(len(plan), plan):
         return plan
 
@@ -169,15 +189,14 @@ def compress_plan(lib, plan):
 
         return None
 
+    # The last operation might have brought the planner closer to a solution.
     shorter_plan = _find_shorter_plan(plan)
     if shorter_plan:
         return shorter_plan
 
-    # Try recovering from the last operation.
+    # Otherwise, we might have to undo the last operation before resuming the plan.
     operators = (Operator * lib.get_applicable_operators_count())()
     lib.get_applicable_operators(operators)
-
-    # print("Operators:\n -> " +"\n -> ".join(_demangle_alfred_name(op.name) for op in operators))
 
     plan = list(plan)
     for operator in operators:
@@ -191,7 +210,7 @@ def compress_plan(lib, plan):
         if shorter_plan:
             return shorter_plan
 
-    # assert False
+    # Can't find any working plan.
     return None
 
 
@@ -234,6 +253,7 @@ def pddl2sas(domain: str, problem: str, verbose: bool = False, optimize=False) -
         domain: text content of the PDDL file describing the domain.
         problem: text content of the PDDL file describing the problem.
         verbose: display information about PDDL->SAS conversion.
+        optimize: discard irrelevant infos resulting in a smaller SAS.
 
     Returns:
         planning task described in the SAS format understood by fast-downward.
@@ -253,7 +273,7 @@ def pddl2sas(domain: str, problem: str, verbose: bool = False, optimize=False) -
         options.use_partial_encoding = True
         options.skip_variable_reordering = False
         options.add_implied_preconditions = True
-        options.invariant_generation_max_candidates = 0
+        options.invariant_generation_max_candidates = 100000
         # options.generate_relaxed_task = True
     else:
         # Do not optimize translation to avoid pruning operators and facts.
@@ -273,6 +293,8 @@ def pddl2sas(domain: str, problem: str, verbose: bool = False, optimize=False) -
 
         normalize.normalize(task)
         sas_task = translate.pddl_to_sas(task)
+        if verbose:
+            translate.dump_statistics(sas_task)
 
         # Write SAS file to a string to avoid I/O.
         sas_io = io.StringIO()

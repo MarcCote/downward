@@ -335,7 +335,7 @@ def test_replanning_in_alfred():
     _, solution = _get_plan()
     # print("Solution:\n -> " +"\n -> ".join(_demangle_alfred_name(op.name) for op in solution))
 
-    solution = fast_downward.compress_plan(lib, solution)
+    solution = fast_downward.update_plan(lib, solution)
     # print("\n\nSolution:\n -> " +"\n -> ".join(_demangle_alfred_name(op.name) for op in solution))
 
     history = []
@@ -356,7 +356,7 @@ def test_replanning_in_alfred():
 
         # assert lib.solve(False)
         # slow_replan = _get_plan()
-        solution = fast_downward.compress_plan(lib, solution)
+        solution = fast_downward.update_plan(lib, solution)
         # print("\n\nSolution:\n -> " +"\n -> ".join(_demangle_alfred_name(op.name) for op in solution))
 
         assert lib.replan(False)

@@ -273,7 +273,7 @@ LaundryHamperType - rtype
         loc_bar__minus_7_bar_5_bar_2_bar_60 - location
         loc_bar_0_bar_2_bar_2_bar_30 - location
         )
-    
+
 
 (:init
 
@@ -363,15 +363,15 @@ LaundryHamperType - rtype
         (openable Drawer_bar__minus_00_dot_51_bar__plus_00_dot_19_bar__minus_00_dot_85)
         (openable Drawer_bar__minus_02_dot_07_bar__plus_00_dot_21_bar__plus_00_dot_73)
         (openable Drawer_bar__minus_02_dot_07_bar__plus_00_dot_49_bar__plus_00_dot_73)
-        
+
         (atLocation agent1 loc_bar_0_bar_2_bar_2_bar_30)
-        
+
         (cleanable Bowl_bar__minus_01_dot_74_bar__plus_00_dot_88_bar__plus_00_dot_58)
         (cleanable Mug_bar__minus_00_dot_57_bar__plus_00_dot_86_bar__minus_01_dot_18)
         (cleanable Mug_bar__minus_02_dot_09_bar__plus_00_dot_88_bar__plus_00_dot_58)
         (cleanable Bowl_bar__minus_00_dot_48_bar__plus_00_dot_86_bar__minus_01_dot_36)
         (cleanable Bowl_bar__minus_00_dot_82_bar__plus_00_dot_86_bar__minus_01_dot_18)
-        
+
         (heatable Mug_bar__minus_00_dot_57_bar__plus_00_dot_86_bar__minus_01_dot_18)
         (heatable Mug_bar__minus_02_dot_09_bar__plus_00_dot_88_bar__plus_00_dot_58)
         (coolable Bowl_bar__minus_01_dot_74_bar__plus_00_dot_88_bar__plus_00_dot_58)
@@ -379,13 +379,13 @@ LaundryHamperType - rtype
         (coolable Mug_bar__minus_02_dot_09_bar__plus_00_dot_88_bar__plus_00_dot_58)
         (coolable Bowl_bar__minus_00_dot_48_bar__plus_00_dot_86_bar__minus_01_dot_36)
         (coolable Bowl_bar__minus_00_dot_82_bar__plus_00_dot_86_bar__minus_01_dot_18)
-        
-        
+
+
         (toggleable DeskLamp_bar__minus_02_dot_30_bar__plus_00_dot_87_bar__plus_00_dot_75)
-        
-        
-        
-        
+
+
+
+
         (inReceptacle CellPhone_bar__minus_02_dot_24_bar__plus_00_dot_67_bar__plus_00_dot_68 Drawer_bar__minus_02_dot_07_bar__plus_00_dot_74_bar__plus_00_dot_73)
         (inReceptacle Book_bar__minus_01_dot_91_bar__plus_00_dot_67_bar__plus_00_dot_72 Drawer_bar__minus_02_dot_07_bar__plus_00_dot_74_bar__plus_00_dot_73)
         (inReceptacle Bowl_bar__minus_01_dot_74_bar__plus_00_dot_88_bar__plus_00_dot_58 Desk_bar__minus_01_dot_58_bar__plus_00_dot_02_bar__plus_00_dot_67)
@@ -413,8 +413,8 @@ LaundryHamperType - rtype
         (inReceptacle AlarmClock_bar__minus_02_dot_27_bar__plus_00_dot_88_bar__plus_00_dot_58 Shelf_bar__minus_01_dot_96_bar__plus_00_dot_87_bar__plus_00_dot_41)
         (inReceptacle DeskLamp_bar__minus_02_dot_30_bar__plus_00_dot_87_bar__plus_00_dot_75 Shelf_bar__minus_01_dot_96_bar__plus_00_dot_87_bar__plus_00_dot_41)
         (inReceptacle Mug_bar__minus_02_dot_09_bar__plus_00_dot_88_bar__plus_00_dot_58 Shelf_bar__minus_01_dot_96_bar__plus_00_dot_87_bar__plus_00_dot_41)
-        
-        
+
+
         (receptacleAtLocation Bed_bar__plus_01_dot_23_bar__plus_00_dot_00_bar__plus_01_dot_67 loc_bar__minus_1_bar_6_bar_1_bar_45)
         (receptacleAtLocation Desk_bar__minus_00_dot_57_bar__plus_00_dot_00_bar__minus_01_dot_35 loc_bar_1_bar__minus_5_bar_3_bar_60)
         (receptacleAtLocation Desk_bar__minus_01_dot_58_bar__plus_00_dot_02_bar__plus_00_dot_67 loc_bar__minus_1_bar_3_bar_3_bar_45)
@@ -468,7 +468,7 @@ LaundryHamperType - rtype
         (objectAtLocation Blinds_bar__plus_00_dot_60_bar__plus_02_dot_16_bar__minus_01_dot_92 loc_bar_2_bar__minus_6_bar_2_bar__minus_30)
         (objectAtLocation Blinds_bar__minus_00_dot_40_bar__plus_02_dot_16_bar__minus_01_dot_92 loc_bar_2_bar__minus_6_bar_3_bar__minus_30)
         )
-    
+
 
         (:goal
              (and
@@ -493,4 +493,3 @@ LaundryHamperType - rtype
              )
         )
     )
-    

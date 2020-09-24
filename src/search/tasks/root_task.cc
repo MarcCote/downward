@@ -377,12 +377,18 @@ RootTask::RootTask(istream &in, const GlobalState &state) {
 
     // Overwrite initial_state_values based on the provided state.
     for (int i = 0; i < num_variables; ++i) {
+        // Skip derived predicates.
+        if (variables[i].axiom_layer != -1) {
+            continue;
+        }
+
         bool match_found = false;
         for (FactProxy fact : state.unpack()) {
 
-            for (string name : variables[i].fact_names) {
-                if (fact.get_name() == name) {
-                    initial_state_values[i] = fact.get_value();
+            for (int j = 0; j < variables[i].fact_names.size(); ++j) {
+                if (fact.get_name() == variables[i].fact_names[j]) {
+                    // initial_state_values[i] = fact.get_value();
+                    initial_state_values[i] = j;
                     match_found = true;
                     break;
                 }
