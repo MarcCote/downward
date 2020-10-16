@@ -236,6 +236,9 @@ extern "C" bool solve_sas(char* input, bool verbose=false) {
 
     lazy_search::LazySearch engine(opts);
 
+    vector<shared_ptr<Evaluator>> preferred_list = opts.get_list<shared_ptr<Evaluator>>("preferred");
+    engine.set_preferred_operator_evaluators(preferred_list);
+
     utils::Timer search_timer;
     engine.search();
     search_timer.stop();
@@ -289,6 +292,9 @@ extern "C" bool replan(bool verbose=false) {
 
     lazy_search::LazySearch engine(opts);
 
+    vector<shared_ptr<Evaluator>> preferred_list = opts.get_list<shared_ptr<Evaluator>>("preferred");
+    engine.set_preferred_operator_evaluators(preferred_list);
+
     utils::Timer search_timer;
     engine.search();
     search_timer.stop();
@@ -341,6 +347,9 @@ extern "C" bool solve(bool verbose=false) {
     GlobalState current_state = state_registry->lookup_state(state_id);
     tasks::read_root_task(in, current_state);
     lazy_search::LazySearch engine(opts);
+
+    vector<shared_ptr<Evaluator>> preferred_list = opts.get_list<shared_ptr<Evaluator>>("preferred");
+    engine.set_preferred_operator_evaluators(preferred_list);
 
     utils::Timer search_timer;
     engine.search();
