@@ -30,6 +30,29 @@ class TestInterface(unittest.TestCase):
     def setUp(self):
         self.lib.load_sas(self.sas.encode('utf-8'))
 
+    def test_load_lib(self):
+        # Loading the library a second time should make a copy.
+        lib = fast_downward.load_lib()
+        lib.load_sas(self.sas.encode('utf-8'))
+
+        assert lib._handle != self.lib._handle
+        assert lib.check_goal() is False
+        assert self.lib.check_goal() is False
+
+        WALKTHROUGH = ['open p d_0', 'go-east p r_0 r_1', 'inventory p', 'examine p c_0']
+        for cmd in WALKTHROUGH:
+            operator_count = lib.get_applicable_operators_count()
+            operators = (Operator * operator_count)()
+            lib.get_applicable_operators(operators)
+            operators = {op.name: op for op in operators}
+            op = operators[cmd]
+
+            effects = (Atom * op.nb_effect_atoms)()
+            lib.apply_operator(op.id, effects)
+
+        assert lib.check_goal() is True
+        assert self.lib.check_goal() is False
+
     def test_pddl2sas(self):
         EXPECTED = [
             "look",
