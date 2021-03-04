@@ -1,0 +1,52 @@
+---
+name: Ubuntu
+
+on: [pull_request]
+
+jobs:
+  compile:
+    name: Compile planner
+    timeout-minutes: 60
+    runs-on: ${{ matrix.ubuntu-version }}
+    strategy:
+      matrix:
+        ubuntu-version: [ubuntu-18.04, ubuntu-20.04]
+        compiler-version:
+          - {cc: gcc, cxx: g++}
+          - {cc: gcc-10, cxx: g++-10}
+          - {cc: clang, cxx: clang++}
+          - {cc: clang-11, cxx: clang++-11}
+        python-version: [3.6]
+        # Unfortunately, we couldn't figure out a way to name the
+        # compiler versions so that we don't have to copy them here.
+        exclude:
+          - ubuntu-version: ubuntu-18.04
+            compiler-version: {cc: gcc-10, cxx: g++-10}
+          - ubuntu-version: ubuntu-18.04
+            compiler-version: {cc: clang-11, cxx: clang++-11}
+    env:
+      CC: ${{ matrix.compiler-version.cc }}
+      CXX: ${{ matrix.compiler-version.cxx }}
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@master
+
+      - name: Install Python
+        uses: actions/setup-python@master
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get -y install zlib1g-dev libgmp3-dev ${{ matrix.compiler-version.cc }}
+          mkdir /home/runner/work/downward/lib
+
+      - name: Install Downward's Python API
+        run: |
+          pip install .
+
+      - name: Test Downward's Python API
+        run: |
+          pip install -r tests/requirements.txt
+          nosetests -sv tests/test_interface.py
+...
