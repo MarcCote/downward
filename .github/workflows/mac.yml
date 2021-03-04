@@ -1,0 +1,30 @@
+---
+name: macOS
+
+on: [pull_request]
+
+jobs:
+  test:
+    name: Compile and test planner
+    timeout-minutes: 60
+    runs-on: macos-10.15
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Python
+        uses: actions/setup-python@master
+        with:
+          python-version: 3.6
+
+      - name: Install Downward's Python API
+        run: |
+          pip install .
+
+      - name: Test Downward's Python API
+        run: |
+          pip install -r tests/requirements.txt
+          nosetests -sv tests/test_interface.py
+...
