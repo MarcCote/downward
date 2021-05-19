@@ -33,7 +33,7 @@ setup(
     packages=find_packages("src", exclude=["driver", "translate.*"]),
     package_data={'fast_downward': ['libdownward.so']},
     include_package_data=True,
-    license=open('LICENSE.md'),
+    license=open('LICENSE.md').read(),
     zip_safe=False,
     description="Fast-Downward - Python API",
     install_requires=open('requirements.txt').readlines(),
