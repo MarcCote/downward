@@ -10,12 +10,12 @@ jobs:
     runs-on: macos-10.15
     steps:
       - name: Clone repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Python
-        uses: actions/setup-python@master
+        uses: actions/setup-python@v2
         with:
           python-version: 3.6
 
