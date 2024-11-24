@@ -1,44 +1,36 @@
 ---
 name: Ubuntu
 
-on: [pull_request]
+on:
+  push:
+    branches: [ "api_for_textworld" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "api_for_textworld" ]
+  schedule:
+    - cron: '37 20 * * 3'
 
 jobs:
   compile:
-    name: Compile planner
+    name: Compile and test planner - ${{ matrix.os }} - Python ${{ matrix.python }}
     timeout-minutes: 60
-    runs-on: ${{ matrix.ubuntu-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        ubuntu-version: [ubuntu-18.04, ubuntu-20.04]
-        compiler-version:
-          - {cc: gcc, cxx: g++}
-          - {cc: gcc-10, cxx: g++-10}
-          - {cc: clang, cxx: clang++}
-          - {cc: clang-11, cxx: clang++-11}
-        python-version: [3.6]
-        # Unfortunately, we couldn't figure out a way to name the
-        # compiler versions so that we don't have to copy them here.
-        exclude:
-          - ubuntu-version: ubuntu-18.04
-            compiler-version: {cc: gcc-10, cxx: g++-10}
-          - ubuntu-version: ubuntu-18.04
-            compiler-version: {cc: clang-11, cxx: clang++-11}
-    env:
-      CC: ${{ matrix.compiler-version.cc }}
-      CXX: ${{ matrix.compiler-version.cxx }}
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+        python: ['3.9', '3.10', '3.12', '3.13']
     steps:
       - name: Clone repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
 
       - name: Install dependencies
         run: |
-          sudo apt-get -y install zlib1g-dev libgmp3-dev ${{ matrix.compiler-version.cc }}
+          sudo apt-get -y install zlib1g-dev libgmp3-dev
           mkdir /home/runner/work/downward/lib
 
       - name: Install Downward's Python API

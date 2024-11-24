@@ -1,23 +1,32 @@
 ---
 name: macOS
 
-on: [pull_request]
+on:
+  push:
+    branches: [ "api_for_textworld" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "api_for_textworld" ]
+  schedule:
+    - cron: '37 20 * * 3'
 
 jobs:
   test:
-    name: Compile and test planner
+    name: Compile and test planner - ${{ matrix.os }} - Python ${{ matrix.python }}
     timeout-minutes: 60
-    runs-on: macos-10.15
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+        python: ['3.9', '3.10', '3.12', '3.13']
     steps:
       - name: Clone repository
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v4
 
       - name: Install Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.6
+          python-version: ${{ matrix.python }}
 
       - name: Install Downward's Python API
         run: |
