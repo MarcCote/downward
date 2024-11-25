@@ -143,6 +143,13 @@ extern "C" size_t apply_operator(size_t operator_idx, Atom_t* effects=NULL) {
     return op_effects.size();
 }
 
+extern "C" int get_state_id() {
+    return state_id.value;
+}
+
+extern "C" void set_state_id(int value) {
+    state_id = StateID(value);
+}
 
 extern "C" int get_state_size() {
     GlobalState current_state = state_registry->lookup_state(state_id);

@@ -163,6 +163,78 @@ class TestInterface(unittest.TestCase):
         EXPECTED = ['Atom at(t_0, r_0)', 'NegatedAtom in(t_0, p)']
         assert set(map(str, effects)) == set(EXPECTED)
 
+    def test_restoring_state(self):
+        operator_count = self.lib.get_applicable_operators_count()
+        operators = (Operator * operator_count)()
+        self.lib.get_applicable_operators(operators)
+        operators = {int(op.id): op for op in operators}
+        op = operators[2]
+        assert op.name == "drop p r_0 t_0"
+
+        # Get state ID
+        state_id = self.lib.get_state_id()
+
+        effects = (Atom * op.nb_effect_atoms)()
+        self.lib.apply_operator(op.id, effects)
+        EXPECTED = ['Atom at(t_0, r_0)', 'NegatedAtom in(t_0, p)']
+        assert set(map(str, effects)) == set(EXPECTED)
+
+        # New state ID should be different.
+        new_state_id = self.lib.get_state_id()
+        assert state_id != new_state_id
+
+        # Check state has changed.
+        state_size = self.lib.get_state_size()
+        atoms = (Atom * state_size)()
+        self.lib.get_state(atoms)
+
+        EXPECTED = [
+            "Atom at(c_0, r_1)",
+            "Atom at(p, r_0)",
+            "Atom at(s_0, r_0)",
+            "Atom closed(c_0)",
+            "Atom closed(d_0)",
+            "NegatedAtom in(t_0, p)",
+            "Atom reachable(p, d_0)",
+            "Atom reachable(p, s_0)",
+            "Atom reachable(p, t_0)",
+            "Atom visible(p, d_0)",
+            "Atom visible(p, p)",
+            "Atom visible(p, s_0)",
+            "Atom visible(p, t_0)"
+        ]
+        assert set(map(str, atoms)).issuperset(set(EXPECTED))
+
+        # Restore state
+        self.lib.set_state_id(state_id)
+
+        # Restored state should have same ID.
+        restored_state_id = self.lib.get_state_id()
+        assert state_id == restored_state_id
+
+        # Check if state is restored.
+        state_size = self.lib.get_state_size()
+        atoms = (Atom * state_size)()
+        self.lib.get_state(atoms)
+
+        EXPECTED = [
+            "Atom at(c_0, r_1)",
+            "Atom at(p, r_0)",
+            "Atom at(s_0, r_0)",
+            "Atom closed(c_0)",
+            "Atom closed(d_0)",
+            "Atom in(t_0, p)",
+            "Atom reachable(p, d_0)",
+            "Atom reachable(p, s_0)",
+            "Atom reachable(p, t_0)",
+            "Atom visible(p, d_0)",
+            "Atom visible(p, p)",
+            "Atom visible(p, s_0)",
+            "Atom visible(p, t_0)"
+        ]
+        assert set(map(str, atoms)).issuperset(set(EXPECTED))
+
+
     def test_check_goal(self):
         WALKTHROUGH = [16, 9, 15, 4, 6]
         for op_id in WALKTHROUGH:
@@ -204,22 +276,7 @@ class TestInterface(unittest.TestCase):
 
     def test_replan(self):
         _, sas = fast_downward.pddl2sas(self.domain, self.problem, optimize=True)
-
-
-        # state_size = self.lib.get_state_size()
-        # atoms = (Atom * state_size)()
-        # self.lib.get_state(atoms)
-
-        # self.lib.load_sas(sas.encode("utf-8"))
-        # state_size = self.lib.get_state_size()
-        # atoms2 = (Atom * state_size)()
-        # self.lib.get_state(atoms2)
-
-        # from ipdb import set_trace; set_trace()
-
-
         self.lib.load_sas_replan(sas.encode("utf-8"))
-
 
         WALKTHROUGH = ['open p d_0', 'go-east p r_0 r_1', 'inventory p', 'examine p c_0']
         for cmd in WALKTHROUGH:

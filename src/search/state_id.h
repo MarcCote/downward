@@ -15,14 +15,14 @@ class StateID {
     friend class PerStateArray;
     friend class PerStateBitset;
 
+    // No implementation to prevent default construction
+    StateID();
+public:
     int value;
     explicit StateID(int value_)
         : value(value_) {
     }
 
-    // No implementation to prevent default construction
-    StateID();
-public:
     ~StateID() {
     }
 
