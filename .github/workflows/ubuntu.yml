@@ -9,6 +9,7 @@ on:
     branches: [ "api_for_textworld" ]
   schedule:
     - cron: '37 20 * * 3'
+  workflow_dispatch:
 
 jobs:
   compile:
