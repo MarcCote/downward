@@ -1,17 +1,14 @@
-include(CMakeParseArguments)
+cmake_minimum_required(VERSION 3.12)
 
 macro(fast_downward_set_compiler_flags)
     # Note: on CMake >= 3.0 the compiler ID of Apple-provided clang is AppleClang.
     # If we change the required CMake version from 2.8.3 to 3.0 or greater,
     # we have to fix this.
-    if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-        include(CheckCXXCompilerFlag)
-        check_cxx_compiler_flag( "-std=c++11" CXX11_FOUND )
-        if(CXX11_FOUND)
-             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-        else()
-            message(FATAL_ERROR "${CMAKE_CXX_COMPILER} does not support C++11, please use a different compiler")
-        endif()
+    if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
+        # Using modern CMake method for C++11 support
+        set(CMAKE_CXX_STANDARD 11)
+        set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        set(CMAKE_CXX_EXTENSIONS OFF)
 
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic -Wnon-virtual-dtor")
@@ -74,7 +71,7 @@ endmacro()
 
 macro(fast_downward_add_profile_build)
     # We don't offer a dedicated PROFILE build on Windows.
-    if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+    if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
         if(NOT CMAKE_CONFIGURATION_TYPES)
             set_property(CACHE CMAKE_BUILD_TYPE PROPERTY HELPSTRING "Choose the type of build")
             set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug;Release;Profile")
@@ -114,7 +111,7 @@ endmacro()
 function(fast_downward_add_existing_sources_to_list _SOURCES_LIST_VAR)
     set(_ALL_FILES)
     foreach(SOURCE_FILE ${${_SOURCES_LIST_VAR}})
-        get_filename_component(_SOURCE_FILE_DIR ${SOURCE_FILE} PATH)
+        get_filename_component(_SOURCE_FILE_DIR ${SOURCE_FILE} DIRECTORY)
         get_filename_component(_SOURCE_FILE_NAME ${SOURCE_FILE} NAME_WE)
         get_filename_component(_SOURCE_FILE_EXT ${SOURCE_FILE} EXT)
         if (_SOURCE_FILE_DIR)
