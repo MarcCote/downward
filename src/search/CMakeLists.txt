@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
 if(NOT FAST_DOWNWARD_MAIN_CMAKELISTS_READ)
     message(
