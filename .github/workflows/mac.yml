@@ -1,5 +1,5 @@
 ---
-name: macOS
+name: macOS - Tests
 
 on:
   push:
@@ -13,12 +13,13 @@ on:
 
 jobs:
   test:
-    name: Compile and test planner - ${{ matrix.os }} - Python ${{ matrix.python }}
+    name: "${{ matrix.os }} | py${{ matrix.python }}"
     timeout-minutes: 60
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-13, macos-14, macos-15]
+        os: [macos-14, macos-15, macos-latest]
         python: ['3.9', '3.10', '3.12', '3.13']
     steps:
       - name: Clone repository
